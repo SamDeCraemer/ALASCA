@@ -20,6 +20,7 @@
 #' @param p_adjust_method Method for correcting p values for multiple testing, see p.adjust.methods
 #' @param participant_column String. Name of the column containing participant identification
 #' @param n_validation_folds Partitions when validating
+#' @param n_cores amount of cores to use for validation runs
 #' 
 #' @return An ALASCA object
 #'
@@ -996,6 +997,7 @@ do_validate <- function() {
   self$get_validation_ids()
   
   temp_object <- lapply(seq_len(self$n_validation_runs), FUN = function(ii) {
+    
     self$log(paste0("- Run ", ii, " of ", self$n_validation_runs))
     start.time.this <- Sys.time()
     
@@ -1278,7 +1280,10 @@ get_regression_predictions <- function() {
   effects_selected<-pull(regcoeff_tb,variable)
   regModel <- unique(model.matrix(self$formula$formula_wo_random, 
                                   data = self$df))
-  regModel <- unique(regModel[,colnames(regModel) %in% effects_selected])
+  #keep effects that are both in regmodel and selected, in the order in which
+  #they appear in the regcoeff tb rows
+  eff_sel_inregModel<-unique(effects_selected %in% colnames(regModel))
+  regModel <- unique(regModel[,effects_selected])
   
   self$model_prediction<-melt(
     cbind(
