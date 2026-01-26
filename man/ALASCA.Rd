@@ -11,7 +11,7 @@ ALASCA(df, formula, effects = NULL, ...)
 
 \item{formula}{Regression formula}
 
-\item{effects}{Vector with effect terms. If \code{NULL}, ALASCA will guess (default)}
+\item{effects}{Vector with effect terms. If \code{NULL}, ALASCA will guess (default). To avoid bugs for complex models, it is crucial to specify effect terms in the order that they appear in formula!}
 
 \item{scale_function}{Either a custom function or string to define scaling function: \code{sdall}, \code{sdref}, \code{sdt1}, \code{sdreft1}}
 
