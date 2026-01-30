@@ -40,6 +40,10 @@ AlascaModel <- R6::R6Class("AlascaModel",
     ),
 
     # Validation settings
+    #' @field n_cores Integer. Specifies the maximum amount of cores to be used for parallel validation runs
+    n_cores = 10L,
+    #' @field maxmem_GB Integer. Specifies the maximum amount of memory to be used for parallel validation runs (note that each run adds a copy of the data object)
+    maxmem_GB = 4L,
     #' @field n_validation_folds Integer. If using jack-knife validation, exclude 1/n_validation_folds of the participants at each iteration
     n_validation_folds = 7L,
     #' @field n_validation_runs Integer. Number of iterations to use for validation
@@ -593,6 +597,7 @@ AlascaModel <- R6::R6Class("AlascaModel",
         paste0("ALASCA (v", self$version, ", ", self$update_date, ")")
       )
     },
+    do_validate_parallel = do_validate_parallel,
     do_validate = do_validate,
     get_scaling_function = get_scaling_function,
     get_default_scaling_function = get_default_scaling_function,

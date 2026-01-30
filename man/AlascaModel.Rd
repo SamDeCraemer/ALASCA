@@ -31,6 +31,10 @@ The object builds the ALASCA model and contains the data
 
 \item{\code{effect_list}}{List. Contains info related to the effects}
 
+\item{\code{n_cores}}{Integer. Specifies the maximum amount of cores to be used for parallel validation runs}
+
+\item{\code{maxmem_GB}}{Integer. Specifies the maximum amount of memory to be used for parallel validation runs (note that each run adds a copy of the data object)}
+
 \item{\code{n_validation_folds}}{Integer. If using jack-knife validation, exclude 1/n_validation_folds of the participants at each iteration}
 
 \item{\code{n_validation_runs}}{Integer. Number of iterations to use for validation}
@@ -126,6 +130,7 @@ The object builds the ALASCA model and contains the data
 \item \href{#method-AlascaModel-do_reduce_dimensions}{\code{AlascaModel$do_reduce_dimensions()}}
 \item \href{#method-AlascaModel-clean_pca}{\code{AlascaModel$clean_pca()}}
 \item \href{#method-AlascaModel-clean_alasca}{\code{AlascaModel$clean_alasca()}}
+\item \href{#method-AlascaModel-do_validate_parallel}{\code{AlascaModel$do_validate_parallel()}}
 \item \href{#method-AlascaModel-do_validate}{\code{AlascaModel$do_validate()}}
 \item \href{#method-AlascaModel-get_validation_percentiles}{\code{AlascaModel$get_validation_percentiles()}}
 \item \href{#method-AlascaModel-get_validation_percentiles_regression}{\code{AlascaModel$get_validation_percentiles_regression()}}
@@ -279,6 +284,15 @@ The object builds the ALASCA model and contains the data
 \subsection{Method \code{clean_alasca()}}{
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{AlascaModel$clean_alasca()}\if{html}{\out{</div>}}
+}
+
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-AlascaModel-do_validate_parallel"></a>}}
+\if{latex}{\out{\hypertarget{method-AlascaModel-do_validate_parallel}{}}}
+\subsection{Method \code{do_validate_parallel()}}{
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{AlascaModel$do_validate_parallel()}\if{html}{\out{</div>}}
 }
 
 }

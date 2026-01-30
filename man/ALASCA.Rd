@@ -38,6 +38,10 @@ ALASCA(df, formula, effects = NULL, ...)
 \item{participant_column}{String. Name of the column containing participant identification}
 
 \item{n_validation_folds}{Partitions when validating}
+
+\item{n_cores}{amount of cores to use for validation runs}
+
+\item{maxmem_GB}{max amount of memory in GB to use for validation runs}
 }
 \value{
 An ALASCA object

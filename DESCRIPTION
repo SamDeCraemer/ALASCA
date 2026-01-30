@@ -31,7 +31,11 @@ Imports:
 	Rfast,
 	data.table,
 	scales,
-	clue
+	clue,
+	future,
+	future.apply,
+	progressr,
+	dplyr
 Suggests: 
     knitr,
     rmarkdown,

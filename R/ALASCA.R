@@ -1,3 +1,6 @@
+#Set data.table aware, otherwise issues arrise in using it in 
+# future.apply paralellisation
+.datatable.aware <- TRUE
 #' Create an ALASCA model
 #'
 #' `ALASCA` initializes an ALASCA model and returns an ALASCA object.
@@ -21,6 +24,7 @@
 #' @param participant_column String. Name of the column containing participant identification
 #' @param n_validation_folds Partitions when validating
 #' @param n_cores amount of cores to use for validation runs
+#' @param maxmem_GB max amount of memory in GB to use for validation runs
 #' 
 #' @return An ALASCA object
 #'
@@ -35,7 +39,9 @@ ALASCA <- function(df,
   # Validate the model ----
   if (object$validate) {
     object$log("Starting validation", level = "DEBUG")
-    object$do_validate()
+    # object$do_validate()
+    object$do_validate_parallel()
+    
     object$log("Completing validation", level = "DEBUG")
   } else {
     if (object$do_debug) currentTs <- Sys.time()
@@ -970,6 +976,132 @@ clean_alasca <- function() {
   }
   
   #invisible(self)
+}
+
+#' Validate (parallel if possible) the ALASCA model LMM
+#'
+#' This function performs leave-one-out robustness testing of your ALASCA model. If you didn't specify the number of runs `n_validation_runs` when initializing the model (see \code{\link{ALASCA}}), you can do it by running for example `model$n_validation_runs <- 100` prior to calling `validate`. Your dataset is divided into `n_validation_folds` partitions, keeping group proportions, and one of these are left out. `n_validation_folds` is set the same way as  `n_validation_runs`.
+#'
+#' @param object An ALASCA object
+#' @param participant_column The name of the column containing participant identifier. Needed if not set during initialization of the model.
+#' @param validate_regression Whether to validate regression models
+#' @return An ALASCA object
+#'
+#' @examples
+#' load("PE.Rdata")
+#' model$n_validation_runs <- 10
+#' model.val <- validate(model, participant_column = "ID")
+#' @export
+do_validate_parallel <- function() {
+  if (self$validate) {
+    # stop("The object has already been validated")
+  }
+  
+  self$log(paste("Starting validation:", self$validation_method))
+  
+  start_time_all <- Sys.time()
+  self$get_validation_ids()
+  
+  #####validation loop
+  # Choose workers (scales automatically; cap at n_validation_runs or the
+  # maximum amount of cores to be used specified)
+  n_workers <- min(self$n_validation_runs, future::availableCores(),
+                   self$n_cores)
+  
+  # Windows: multisession creates separate R sessions
+  future::plan(future::multisession, workers = n_workers)
+  
+  # If 'self' is large, you may need a bigger globals cap (default ~500MB)
+  # Adjust upward only if you get "future.globals.maxSize" errors.
+  options(future.globals.maxSize = self$maxmem_GB * 1024^3)  # 4GB
+  
+  # Optional: make parallel RNG reproducible (recommended if any randomness occurs)
+  # (You can also pass future.seed = TRUE in future_lapply)
+  set.seed(1)
+  
+  start_time_all <- Sys.time()
+  
+  # Progress bar (nice on Windows / RStudio too)
+  handlers(global = TRUE)
+  
+  with_progress({
+    p <- progressor(along = seq_len(self$n_validation_runs))
+    
+    # Run in parallel
+    out <- future_lapply(
+      X = seq_len(self$n_validation_runs),
+      future.packages = c(
+        "data.table",
+        "dplyr"),
+      FUN = function(ii) {
+        p(sprintf("Run %d / %d", ii, self$n_validation_runs))
+        
+        start.time.this <- Sys.time()
+        
+        # Collect log lines locally (do NOT write to file from workers)
+        log_lines <- character()
+        log_lines <- c(log_lines, sprintf("- Run %d of %d", ii, self$n_validation_runs))
+        
+        # --- Your original work ---
+        obj <- self$prepare_validation_run(runN = ii)
+        if (nrow(self$df) > 100000) gc()
+        
+        if (isTRUE(self$optimize_PCs)) {
+          obj$optimize_components(target = self)
+        }
+        
+        if (isTRUE(self$optimize_score)) {
+          obj$rotate_matrix_optimize_score(target = self)
+        } else {
+          obj$rotate_matrix(target = self)
+        }
+        
+        obj$clean_alasca()
+        obj$effect_list <- NULL
+        
+        elapsed <- as.numeric(difftime(Sys.time(), start.time.this, units = "secs"))
+        log_lines <- c(log_lines, sprintf("--- Used %.2f seconds.", elapsed))
+        
+        # Return both object + logs + timing + run index
+        list(
+          ii      = ii,
+          result  = obj,
+          seconds = elapsed,
+          log     = log_lines
+        )
+      },
+      future.seed = F
+    )
+    
+    # ---- Back on main process: order + file-safe logging ----
+    out <- out[order(vapply(out, `[[`, integer(1), "ii"))]
+    
+    # Write per-run logs sequentially (safe for file logging)
+    for (x in out) {
+      for (line in x$log) self$log(line)
+    }
+    
+    # Summary log (optional)
+    total_elapsed <- as.numeric(difftime(Sys.time(), start_time_all, units = "secs"))
+    mean_run <- mean(vapply(out, `[[`, numeric(1), "seconds"))
+    self$log(sprintf(
+      "=== Parallel validation done in %.2f s | mean run %.2f s | workers=%d ===",
+      total_elapsed, mean_run, n_workers
+    ))
+    
+    # Return list of objects (same shape as original lapply)
+    temp_object <- lapply(out, `[[`, "result")
+  })
+  
+  # temp_object is your output list (as before)
+  
+  
+  self$clean_alasca()
+  
+  self$log("Calculating percentiles for score and loading")
+  self$get_validation_percentiles(objectlist = temp_object)
+  
+  #invisible(object)
 }
 
 #' Validate the ALASCA model LMM
